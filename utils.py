@@ -3,6 +3,7 @@ import os
 import glob
 import cv2 as cv
 import numpy as np
+from scipy.signal import convolve2d
 
 class Q1():
 
@@ -21,6 +22,10 @@ class Q1():
             cv.waitKey(0)
         self.q1_1 = True
         return image
+
+    @staticmethod
+    def waitkey():
+        cv.waitKey()
 
     @staticmethod    
     def showimage(image, win_name):
@@ -114,33 +119,69 @@ class Q2(Q1):
 class Q3(Q1):
     def __init__(self, path):
         super().__init__(path)
-        self.image = self.load_image()
+        self.image = cv.cvtColor(self.load_image(), cv.COLOR_BGR2GRAY)
+        self.Gx = np.array([[-1, 0, 1],[-2, 0, 2],[-1, 0, 1]])
+        self.Gy = np.flip(self.Gx.T, axis=0)
+        self.sobel_X = None
+        self.sobel_Y = None
+
+    @staticmethod
+    def __gaussian_kernels(size = 5, sigma= 1):
+        upper = size - 1
+        lower = - int(size/2)
+        y, x = np.mgrid[lower: upper, lower:upper]
+
+        kernel = (1 / (2* np.pi * sigma ** 2)) * np.exp(- (x**2 + y**2) / (2*sigma**2))
+
+        return kernel 
 
     def gaussian_blur(self):
         image = self.image.copy()
-        gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
-        Gaussian_kernel = [[]]
-
-    def sobelX(self):
-        image = self.image.copy()
+        gaussian_kernel = self.__gaussian_kernels(3,1)
         
+        post_gf_conv = convolve2d(image, gaussian_kernel, mode='same', 
+                                boundary='fill', fillvalue=0)
+        post_gf_conv = np.round(post_gf_conv)
+        post_gf_conv = post_gf_conv.astype(np.uint8)
+        self.showimage(image, "Origin")
+        self.showimage(post_gf_conv, "3.1 Gaussian Blur")
+        return post_gf_conv
 
-    def sobelY(self):
-        pass
+    def sobelX(self, show_image = False):
+        image = self.image.copy()
+        sobel_X = convolve2d(image, self.Gx, mode='same', boundary='fill', fillvalue=0 )
+        if show_image:
+            self.showimage(np.absolute(sobel_X).astype(np.uint8), "3.2 Sobel X")
+        return sobel_X
+
+    def sobelY(self, show_image= False):
+        image = self.image.copy()
+        sobel_Y = convolve2d(image, self.Gy, mode='same', boundary='fill', fillvalue=0 )
+        if show_image:
+            self.showimage(np.absolute(sobel_Y).astype(np.uint8), "3.3 Sobel Y")
+        return sobel_Y
 
     def magnitude(self):
-        pass
+        if self.sobel_X is None and self.sobel_Y is None:
+            self.sobel_X = self.sobelX()
+            self.sobel_Y = self.sobelY()
+        gradient_magnitude = np.sqrt(np.square(self.sobel_X) + np.square(self.sobel_Y))
+        gradient_magnitude *= 255.0/gradient_magnitude.max()
+        self.showimage(gradient_magnitude.astype(np.uint8), '3.4 Magnitude')
 
 class Q4(Q1):
     def __init__(self, path):
         super().__init__(path)
         self.image = self.load_image()
+
+    @staticmethod
+    def waitkey():
+        cv.waitKey()
     
     def resize(self, size:tuple):
         image = self.image.copy()
         resize_image = cv.resize(image, size)
         self.showimage(resize_image, "Resized Image")
-        cv.waitKey()
         return resize_image
 
     def translations(self, tX = 0, tY = 0):
@@ -149,7 +190,6 @@ class Q4(Q1):
         M = np.array([[1,0,tX], [0,1, tY]], dtype=np.float32)
         translation_image = cv.warpAffine(img, M, (400, 300))
         self.showimage(translation_image, "After Translation")
-        cv.waitKey()
         return translation_image
 
     def rotate(self, angle= 0, scale = 1.0):
@@ -159,7 +199,6 @@ class Q4(Q1):
         rotate_matrix = cv.getRotationMatrix2D(center=center, angle=angle, scale=scale)
         rotate_image = cv.warpAffine(img, rotate_matrix, (400,300))
         self.showimage(rotate_image, "After Rotate")
-        cv.waitKey()
         return rotate_image
 
     def shearing(self):
@@ -167,34 +206,13 @@ class Q4(Q1):
         h, w = img.shape[:2]
         old_location = np.float32([[50,50],[200,50],[50,200]])
         new_location = np.float32([[10,100],[200,50],[100,250]])
-        src = order_points(old_location)
-        dst = order_points(new_location)
 
         # # shear_matrix = np.array([[1, shX, 0], [shY,1,0], [0,0,1]], dtype=np.float32)
-        shear_matrix = cv.getPerspectiveTransform(src, dst)
-        sheared_img = cv.warpPerspective(img,shear_matrix,(400, 300), flags=cv.INTER_LINEAR)
+        shear_matrix = cv.getAffineTransform(old_location, new_location)
+        sheared_img = cv.warpAffine(img, shear_matrix, (400,300))
         self.showimage(sheared_img, "Shearing Image")
-        cv.waitKey()
+        return sheared_img
 
-def order_points(pts):
-	# initialzie a list of coordinates that will be ordered
-	# such that the first entry in the list is the top-left,
-	# the second entry is the top-right, the third is the
-	# bottom-right, and the fourth is the bottom-left
-	rect = np.zeros((4, 2), dtype = "float32")
-	# the top-left point will have the smallest sum, whereas
-	# the bottom-right point will have the largest sum
-	s = pts.sum(axis = 1)
-	rect[0] = pts[np.argmin(s)]
-	rect[2] = pts[np.argmax(s)]
-	# now, compute the difference between the points, the
-	# top-right point will have the smallest difference,
-	# whereas the bottom-left will have the largest difference
-	diff = np.diff(pts, axis = 1)
-	rect[1] = pts[np.argmin(diff)]
-	rect[3] = pts[np.argmax(diff)]
-	# return the ordered coordinates
-	return rect
 
 if __name__ == "__main__":
     q4 = Q4("./Q4_Image/SQUARE-01.png")

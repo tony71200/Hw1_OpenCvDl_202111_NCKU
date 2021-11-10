@@ -6,9 +6,7 @@ from PyQt5.QtWidgets import QLabel, QWidget, QLineEdit
 from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout
 from PyQt5.QtWidgets import QPushButton, QGroupBox
 from PyQt5.QtCore import Qt, QMetaObject
-from cv2 import resize
 from numpy.lib.function_base import angle
-
 import utils as u
 __appname__ = "2021 Opencvdl Hw1"
 
@@ -204,15 +202,22 @@ class MainWindow(QMainWindow, windowUI):
         pass
 
     def edge_gaussian(self):
+        self.q3.image = self.q3.gaussian_blur()
+        self.q3.waitkey()
         pass
 
     def sobelx(self):
+        self.q3.sobel_X = self.q3.sobelX(True)
+        self.q3.waitkey()
         pass
 
     def sobely(self):
+        self.q3.sobel_Y = self.q3.sobelY(True)
+        self.q3.waitkey()
         pass
 
     def magnitude(self):
+        self.q3.magnitude()
         pass
 
     def resize(self):
@@ -220,6 +225,7 @@ class MainWindow(QMainWindow, windowUI):
         h = int(self.edit_4_1_h.text())
         self.q4.image = self.q4.resize((w, h))
         print(self.q4.image.shape)
+        self.q4.waitkey()
         pass
 
     def translation(self):
@@ -227,6 +233,7 @@ class MainWindow(QMainWindow, windowUI):
         y = int(self.edit_4_2_y.text())
         self.q4.image = self.q4.translations(x, y)
         print(self.q4.image.shape)
+        self.q4.waitkey()
         pass
 
     def rotation(self):
@@ -234,19 +241,18 @@ class MainWindow(QMainWindow, windowUI):
         angle = int(self.edit_4_3_angle.text())
         self.q4.image = self.q4.rotate(angle, scale)
         print(self.q4.image.shape)
+        self.q4.waitkey()
         pass
 
     def shearing(self):
         self.q4.image = self.q4.shearing()
+        self.q4.waitkey()
         pass
-
-
-
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()
     window.setGeometry(500, 150, 500, 300)
     window.show()
-    sys,exit(app.exec_())
+    sys.exit(app.exec_())
 
